@@ -1,0 +1,33 @@
+#!/bin/sh
+# 阻止直接推送 main —— 所有改动必须开分支走 PR
+#
+# 启用方式（每个人 clone 后执行一次）：
+#   git config core.hooksPath .githooks
+#
+# 应急绕过：
+#   git push --no-verify
+# （用了就算破例，别当成常规操作）
+
+branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+
+if [ "$branch" = "main" ]; then
+  cat <<'EOF'
+
+  ✗ 你正在 main 分支上，不能直接推送。
+
+    正确做法（三步）：
+      git checkout -b feat/你改了什么
+      git push -u origin feat/你改了什么
+      然后去 GitHub 网页点 "Compare & pull request"
+
+    如果你已经 commit 了但还没推：
+      git checkout -b feat/你改了什么    # 提交会跟着一起过去
+      git push -u origin feat/你改了什么
+
+    真的急用：git push --no-verify
+
+EOF
+  exit 1
+fi
+
+exit 0
