@@ -1,0 +1,20 @@
+# 统一换行，避免 Windows/Mac/Linux 各人 clone 后文件"整体被改"
+* text=auto
+
+# Windows 批处理必须是 CRLF，否则 cmd 解析会错
+*.bat text eol=crlf
+
+# 代码统一 LF
+*.py   text eol=lf
+*.js   text eol=lf
+*.css  text eol=lf
+*.html text eol=lf
+*.md   text eol=lf
+*.json text eol=lf
+
+# 二进制，不做任何转换
+*.wav binary
+*.mp3 binary
+*.ico binary
+*.png binary
+*.zip binary

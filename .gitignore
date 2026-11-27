@@ -1,0 +1,49 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# ---- 模型权重（绝不入库，走下载脚本）----
+models/
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.onnx
+
+# ---- 运行产物 ----
+runs/
+outputs/
+results/
+logs/
+*.log
+
+# ---- 音频：只保留 assets 下的示例 ----
+*.wav
+!assets/*.wav
+*.mp3
+*.flac
+*.m4a
+*.ogg
+
+# ---- 数据集 ----
+data/
+corpus/
+audio_holdout/
+
+# ---- 本地配置与密钥 ----
+.env
+config.local.*
+*.key
+secret*
+
+# ---- 系统 ----
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,20 @@
+# 谁负责哪块代码
+# 规则：出现在这里的路径，改动必须由对应负责人 review 才能合并
+# 现在只有组长一个账号；组员注册 GitHub 后，把下面第二列的账号替换成他们的用户名
+
+*                       @yunxiang-star
+
+# 核心算法与后端：只有组长能改，其他人改动必须 review
+/core.py                @yunxiang-star
+/app.py                 @yunxiang-star
+/launch.py              @yunxiang-star
+/selftest.py            @yunxiang-star
+
+# 前端：组员接手后改成他的账号
+/static/                @yunxiang-star
+
+# 工具脚本：新人的主战场，可以自由提 PR，合并仍走 review
+/tools/                 @yunxiang-star
+
+# 文档：谁都可以改
+/docs/                  @yunxiang-star

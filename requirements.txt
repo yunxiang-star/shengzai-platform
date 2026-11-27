@@ -1,0 +1,17 @@
+# 声载密语 演示台依赖
+# Python 3.10+（推荐 3.11）
+# 安装：pip install -r requirements.txt
+# GPU 用户请先按 https://pytorch.org 的指引装对应 CUDA 版 torch，再装本文件其余项
+
+fastapi>=0.110
+uvicorn[standard]>=0.27
+python-multipart>=0.0.9
+
+numpy>=1.24
+scipy>=1.10
+soundfile>=0.12
+pystoi>=0.3.4
+matplotlib>=3.7
+
+torch>=2.2
+transformers>=4.40

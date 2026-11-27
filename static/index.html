@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f6f8fc">
+  <title>语音隐写演示台 · 把口令藏进声音里</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" data-view="lab" aria-label="回到演示">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 36 36" role="img">
+          <rect x="3" y="3" width="30" height="30" rx="10" fill="#2563eb"/>
+          <path d="M9 20c3.2 0 3.2-8 6.4-8s3.2 13 6.4 13 3.2-10 5.2-10" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span>
+        <strong>语音隐写演示台</strong>
+        <small>把短口令藏进声音的索引里</small>
+      </span>
+    </a>
+    <nav class="nav" aria-label="页面切换">
+            <button class="nav-btn active" data-view="lab">嵌入实验</button>
+            <button class="nav-btn" data-view="extract">提取验证</button>
+            <button class="nav-btn" data-view="learn">协议与威胁模型</button>
+    </nav>
+    <div class="status-pill" id="healthPill">
+      <span class="status-dot"></span>
+      <span id="healthText">正在叫醒模型</span>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="view active" id="view-lab">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">24 kHz · 6/12/24 kbps · 8/16 bit 短口令</p>
+          <h1>把一句短口令，<br><span>藏进声音的“索引抽屉”里。</span></h1>
+          <p class="hero-lead">
+            这不是一段播放器特效。每次点击都会真的跑 EnCodec：
+            <b>编码 → 改索引 → 还原 WAV → 再编码 → 纠错提取</b>。
+            你能听到声音，也能看到索引和失败边界。
+          </p>
+          <div class="hero-tags">
+            <span>真模型，不是假动画</span>
+            <span>提取不需要原声</span>
+            <span>同一条 codec 链路</span>
+          </div>
+          <button class="text-link" id="heroDemoBtn" type="button">
+            先用示例音频跑一遍
+            <span aria-hidden="true">→</span>
+          </button>
+        </div>
+        <div class="hero-visual" aria-label="流程示意">
+          <div class="orbit orbit-a"></div>
+          <div class="orbit orbit-b"></div>
+          <div class="codec-card">
+            <div class="codec-header">
+              <span>声音索引抽屉</span>
+              <span class="mini-badge">1024 格 × 8 层</span>
+            </div>
+            <div class="drawer-grid" aria-hidden="true">
+              <i></i><i class="hot"></i><i></i><i></i><i></i><i class="blue"></i><i></i><i></i>
+              <i></i><i></i><i class="hot"></i><i></i><i></i><i></i><i></i><i class="blue"></i>
+              <i class="blue"></i><i></i><i></i><i></i><i class="hot"></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i class="hot"></i><i></i><i></i><i class="blue"></i><i></i>
+            </div>
+            <div class="codec-foot">
+              <span class="legend"><i class="dot gray"></i>原索引</span>
+              <span class="legend"><i class="dot blue"></i>写成 1</span>
+              <span class="legend"><i class="dot red"></i>写成 0</span>
+            </div>
+          </div>
+          <div class="floating-note note-a">改的是编号，不是音量</div>
+          <div class="floating-note note-b">再编码后，还能读回来</div>
+          <div class="sound-wave" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="stepbar" aria-label="演示步骤">
+        <div class="step active" data-step="1"><b>1</b><span>选音频</span><small>最好 2–12 秒</small></div>
+        <div class="step" data-step="2"><b>2</b><span>给口令</span><small>默认 2 位十六进制</small></div>
+        <div class="step" data-step="3"><b>3</b><span>真正藏入</span><small>改 L0 索引</small></div>
+        <div class="step" data-step="4"><b>4</b><span>再编码自检</span><small>不是内存假成功</small></div>
+        <div class="step" data-step="5"><b>5</b><span>试听 / 下载</span><small>还能去提取页复核</small></div>
+      </section>
+
+      <div class="workspace">
+        <div class="main-column">
+          <section class="card input-card" id="inputCard">
+            <div class="card-heading">
+              <div>
+                <p class="eyebrow">STEP 1 · 准备载体</p>
+                <h2>先放一段声音进来</h2>
+              </div>
+              <span class="hint-chip">支持 WAV</span>
+            </div>
+
+            <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="选择 WAV 文件">
+              <input type="file" id="audioInput" accept=".wav,audio/wav,audio/x-wav" hidden>
+              <div class="drop-icon" aria-hidden="true">
+                <svg viewBox="0 0 48 48"><path d="M24 32V12m0 0-7 7m7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 30v5a3 3 0 0 0 3 3h22a3 3 0 0 0 3-3v-5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+              </div>
+              <p><strong>把 WAV 拖到这里</strong>，或点击选择</p>
+              <small>建议 2–12 秒、单人说话。太长会只取前 12 秒。</small>
+              <button class="ghost-btn" id="demoBtn" type="button">用示例音频</button>
+              <div class="file-chip" id="fileChip" hidden>
+                <span class="file-wave" aria-hidden="true">▮▮▮▮</span>
+                <span id="fileName">未选择文件</span>
+                <span id="fileMeta"></span>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <fieldset class="field full">
+                <legend>STEP 2 · 选藏法</legend>
+                <div class="mode-grid">
+                  <label class="mode-card active" data-mode-card="direct">
+                    <input type="radio" name="mode" value="direct" checked>
+                    <span class="mode-dot"></span>
+                    <strong>直接换抽屉</strong>
+                    <small>更容易恢复，但索引“某几格突然变多”，直方图容易看出来。</small>
+                    <em>演示：30/30 · 分段 SNR 27 dB · 直方图 AUC 0.921（留出集）</em>
+                  </label>
+                  <label class="mode-card" data-mode-card="hpp">
+                    <input type="radio" name="mode" value="hpp">
+                    <span class="mode-dot"></span>
+                    <strong>换座位，不换书单</strong>
+                    <small>只交换已有索引，保持出现次数不变。恢复略降，直方图痕迹小很多。</small>
+                    <em>演示：30/30 · 分段 SNR 约 24 dB · 直方图 AUC 0.598（留出集）</em>
+                  </label>
+                </div>
+                <div class="inline-note" id="modeNote">
+                  <b>直接换抽屉：</b>像把“第 17 格”改成“第 900 格”。声音变化小，但格子使用次数会变。
+                </div>
+              </fieldset>
+
+              <label class="field">
+                <span>STEP 2 · 要藏的短口令</span>
+                <div class="input-with-action">
+                  <input id="secretInput" type="text" value="C0" maxlength="2" autocomplete="off" spellcheck="false" aria-describedby="secretHint">
+                  <button type="button" class="mini-btn" id="randomSecret">换一个</button>
+                </div>
+                <small id="secretHint">默认正好 2 位十六进制（0–9 / A–F）= 8 bit。不是 2 个汉字的容量。</small>
+              </label>
+
+              <label class="field">
+                <span>STEP 2 · 演示密钥</span>
+                <input id="keyInput" type="text" value="demo-2026" autocomplete="off" spellcheck="false" aria-describedby="keyHint">
+                <small id="keyHint">提取时必须一模一样。它是映射钥匙，不是加密密码。</small>
+              </label>
+
+              <label class="field">
+                <span>STEP 2 · 口令长度</span>
+                <select id="payloadSelect" aria-describedby="payloadHint">
+                  <option value="16">16 bit（4 位十六进制）</option>
+                  <option value="8" selected>8 bit（2 位十六进制）· 推荐，改动少约 40%</option>
+                </select>
+                <small id="payloadHint">推荐 8 bit：载波从 66 降到 42，实测失真更低、同链路完整恢复率更高。</small>
+              </label>
+
+              <fieldset class="field full">
+                <legend>STEP 3 · 交付音质</legend>
+                <div class="quality-row" id="qualityRow">
+                  <label class="quality-pill" data-quality-card="6">
+                    <input type="radio" name="bandwidth" value="6">
+                    <strong>6 kbps</strong>
+                    <span>8 层 RVQ。论文用的档位，最"金属"。</span>
+                  </label>
+                  <label class="quality-pill" data-quality-card="12">
+                    <input type="radio" name="bandwidth" value="12">
+                    <strong>12 kbps</strong>
+                    <span>16 层。折中。</span>
+                  </label>
+                  <label class="quality-pill active" data-quality-card="24">
+                    <input type="radio" name="bandwidth" value="24" checked>
+                    <strong>24 kbps · 默认</strong>
+                    <span>32 层。这段音频上重建最接近原声。</span>
+                  </label>
+                </div>
+                <small>只改"听起来有多像机器"，不改能不能取回：<b>同一个交付文件</b>用 6/12/24 kbps 任一层数重新编码，第 0 层码字逐位相同（已实测 12 组互提全部成功）。</small>
+              </fieldset>
+            </div>
+
+            <div class="privacy-note">
+              <span class="shield" aria-hidden="true">◇</span>
+              <p><b>只在本机跑。</b>文件会上传到本机 Python 服务；不会传到云端。页面里的“密钥”只用于演示，不要把真实秘密交给这个公开 Demo。</p>
+            </div>
+
+            <div class="action-row">
+              <button class="primary-btn" id="embedBtn" type="button" disabled>
+                <span>开始把口令藏进去</span>
+                <span class="btn-arrow" aria-hidden="true">→</span>
+              </button>
+              <span class="action-hint">预计 2–8 秒；CPU 上跑真模型。</span>
+            </div>
+            <div class="alert error" id="labError" hidden></div>
+          </section>
+
+          <section class="card loading-card" id="loadingCard" hidden aria-live="polite">
+            <div class="loader-ring" aria-hidden="true"></div>
+            <div>
+              <p class="eyebrow">正在真实执行</p>
+              <h2 id="loadingTitle">先让 EnCodec 把声音拆成索引…</h2>
+              <div class="loading-steps" id="loadingSteps">
+                <span class="load-step active">读 WAV</span>
+                <span class="load-step">EnCodec 编码</span>
+                <span class="load-step">修改 L0 索引</span>
+                <span class="load-step">还原 PCM16 WAV</span>
+                <span class="load-step">再编码 + 纠错自检</span>
+              </div>
+              <p class="loading-sub">这不是进度条动画：后端正在跑模型，完成后才会返回结果。</p>
+            </div>
+          </section>
+
+          <section id="resultPanel" hidden>
+            <div class="result-banner" id="resultBanner">
+              <div class="result-icon" id="resultIcon">✓</div>
+              <div>
+                <p class="eyebrow">STEP 4 · 自检结果</p>
+                <h2 id="resultTitle">取回来了。</h2>
+                <p id="resultSubtitle">这不是“塞进去了”就算成功，而是从落盘 WAV 重新编码后又读了一遍。</p>
+              </div>
+              <div class="result-code" id="resultCode">C0</div>
+            </div>
+
+            <div class="metric-grid" id="metricGrid"></div>
+
+            <div class="card secret-card">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">16 BIT 口令</p>
+                  <h2>左边是写进去的，右边是取回来的</h2>
+                </div>
+                <span class="hint-chip" id="asciiHint">可读字符：—</span>
+              </div>
+              <div class="bit-compare">
+                <div>
+                  <div class="bit-label"><span>写入</span><code id="sentHex">C0</code></div>
+                  <div class="bits" id="sentBits" aria-label="写入的比特"></div>
+                </div>
+                <div class="bit-arrow" aria-hidden="true">→</div>
+                <div>
+                  <div class="bit-label"><span>取回</span><code id="recoveredHex">C0</code></div>
+                  <div class="bits" id="recoveredBits" aria-label="取回的比特"></div>
+                </div>
+              </div>
+              <p class="plain-explain" id="bitExplain"></p>
+            </div>
+
+            <div class="card timeline-card">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">这五步真的发生了</p>
+                  <h2>不是“写进内存就算赢”</h2>
+                </div>
+                <span class="hint-chip" id="frameChip">— 帧</span>
+              </div>
+              <ol class="timeline" id="timeline">
+                <li class="active"><b>1</b><div><strong>拆声音</strong><span>EnCodec 把声音拆成很多帧，每帧有 8 层索引。</span></div></li>
+                <li class="active"><b>2</b><div><strong>写口令</strong><span>16 bit 加上纠错冗余，变成更多比特。</span></div></li>
+                <li class="active"><b>3</b><div><strong>改索引</strong><span>只动 L0 的一小部分位置；其他层不动。</span></div></li>
+                <li class="active"><b>4</b><div><strong>还原 WAV</strong><span>把改过的索引解码回声音，并保存成 PCM16。</span></div></li>
+                <li class="active"><b>5</b><div><strong>再编码自检</strong><span>重新读入、再进 EnCodec、纠错；这一步才决定成败。</span></div></li>
+              </ol>
+            </div>
+
+            <div class="card audio-card">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">STEP 5 · 耳朵验收</p>
+                  <h2>三段一起听：codec 的失真和藏法的失真分开算</h2>
+                </div>
+                <span class="hint-chip">先 A/B，再归因</span>
+              </div>
+              <div class="audio-grid three">
+                <div>
+                  <div class="audio-label"><span class="dot gray"></span>① 原始 WAV</div>
+                  <audio id="sourceAudio" controls preload="metadata"></audio>
+                </div>
+                <div>
+                  <div class="audio-label"><span class="dot gray"></span>② EnCodec 重建（未藏）</div>
+                  <audio id="coverAudio" controls preload="metadata"></audio>
+                </div>
+                <div>
+                  <div class="audio-label"><span class="dot blue"></span>③ 藏字版</div>
+                  <audio id="stegoAudio" controls preload="metadata"></audio>
+                </div>
+              </div>
+              <div class="percept" id="perceptBox"></div>
+              <img class="wide-image" id="waveformImage" alt="公开音频、藏字音频和放大后的波形差">
+            </div>
+
+            <div class="card token-card">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">打开抽屉看一层</p>
+                  <h2>前 24 个载波位置：编号到底怎么变了</h2>
+                </div>
+                <span class="hint-chip" id="changedChip">—</span>
+              </div>
+              <div class="token-legend">
+                <span><i class="swatch plain"></i>没变</span>
+                <span><i class="swatch changed"></i>被改过</span>
+                <span><code>上=原索引</code><code>下=新索引</code></span>
+              </div>
+              <div class="token-grid" id="tokenGrid"></div>
+              <p class="plain-explain">
+                每个小格子是一帧里的一个 L0 索引。你现在看到的只是前 24 个载波。
+                “直接换抽屉”会换掉一部分编号；“换座位”会重排整组编号，但出现的编号种类与次数完全不变。
+              </p>
+            </div>
+
+            <div class="card security-card">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">不是安全检测，只是体检</p>
+                  <h2>索引分布：肉眼看不出的那层统计</h2>
+                </div>
+                <span class="hint-chip">AUC / L1 不是同一个东西</span>
+              </div>
+              <div class="chart-grid">
+                <figure>
+                  <img id="histogramImage" alt="发送端和接收端的索引频数散点图">
+                  <figcaption>每个点是一个索引。越贴对角线，公开版和藏字版的使用次数越接近。</figcaption>
+                </figure>
+                <figure>
+                  <img id="divergenceImage" alt="接收端索引分布压缩柱状图">
+                  <figcaption>为了好懂，这里把 1024 个索引按 32 个一组压缩。真实 L1 看上面的数字卡片。</figcaption>
+                </figure>
+              </div>
+              <div class="warning-box" id="securityNote"></div>
+            </div>
+
+            <div class="card download-card">
+              <div>
+                <p class="eyebrow">拿走它</p>
+                <h2>下载藏字 WAV，再去“提取验证”复核</h2>
+                <p class="muted">下载后不要转成 MP3，不要裁剪，不要重采样。当前只验证这条 EnCodec 24 kHz / PCM16 链路，交付档位 6/12/24 kbps 不影响提取。</p>
+              </div>
+              <div class="download-actions">
+                <a class="primary-btn small" id="downloadStego" download>下载藏字 WAV</a>
+                <a class="ghost-btn small" id="downloadCover" download>下载公开版</a>
+                <button class="text-link" id="goExtract" type="button">带这个文件去提取 →</button>
+              </div>
+            </div>
+            <div class="try-again">
+              <div id="failureActions" hidden>
+                <button class="primary-btn small" id="retryEmbed" type="button">换一组随机再试</button>
+                <button class="ghost-btn small" id="switchDirect" type="button">改用「直接换抽屉」</button>
+              </div>
+              <button class="text-link" id="againBtn" type="button">← 再藏一条</button>
+            </div>
+          </section>
+        </div>
+
+        <aside class="side-column">
+          <section class="card aside-card">
+            <p class="eyebrow">协议要点</p>
+            <h2>一句话：<br>改编号，不改声音的外壳</h2>
+            <div class="mini-flow">
+              <div><span>1</span><b>声音</b><small>变成 24 kHz WAV</small></div>
+              <i>↓</i>
+              <div><span>2</span><b>抽屉</b><small>EnCodec 拆成索引</small></div>
+              <i>↓</i>
+              <div><span>3</span><b>换编号</b><small>把口令写进去</small></div>
+              <i>↓</i>
+              <div><span>4</span><b>还原</b><small>解码回 WAV</small></div>
+              <i>↓</i>
+              <div><span>5</span><b>再读</b><small>重编码 + 纠错</small></div>
+            </div>
+            <p class="aside-caption">真正决定成败的是第 5 步。很多“隐写演示”停在第 3 步，那个不算端到端。</p>
+          </section>
+
+          <section class="card aside-card">
+            <p class="eyebrow">和论文实验对齐</p>
+            <h2>页面上的两种模式，不是随口编的</h2>
+            <div class="reference-table">
+              <div class="ref-head"><span>方案</span><span>恢复</span><span>直方图 AUC</span></div>
+              <div><span>直接替换</span><b>100%</b><em>0.921</em></div>
+              <div><span>HPP 置换</span><b>97.5%</b><em>0.598</em></div>
+            </div>
+            <p class="aside-caption">恢复率与 AUC 来自 12 个最终留出说话人 × 10 条 PCM16 音频。演示台为了短音频更稳，把 HPP 改成 P=128 / conv13，并加了“发送前自检 + 最多 12 次重试”，所以现场数字和这篇留出实验不是同一套配置——两侧都别互相冒充。</p>
+          </section>
+
+          <section class="card aside-card warning-aside">
+            <p class="eyebrow">三个不要误会</p>
+            <ul class="myth-list">
+              <li><b>不是加密。</b><span>听到的还是这段话（16 bit 不以声音形式存在），但知道算法、密钥和 codec 参数的人能把它取出来。</span></li>
+              <li><b>不是任意音频都行。</b><span>没有验证微信、MP3、降噪、裁剪后的鲁棒性。</span></li>
+              <li><b>不是不可检测。</b><span>HPP 只是把最明显的直方图痕迹压低，仍有 LFCC / Nes2Net 偏移。</span></li>
+            </ul>
+          </section>
+
+          <section class="card aside-card tiny-aside">
+            <p class="eyebrow">本次真正跑的参数</p>
+            <div class="param-list">
+              <span>EnCodec 24 kHz</span>
+              <span>6/12/24 kbps</span>
+              <span>L0 索引</span>
+              <span>卷积码 + 交织</span>
+              <span>PCM16 回读</span>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </section>
+
+    <section class="view" id="view-extract" hidden>
+      <section class="page-intro compact">
+        <p class="eyebrow">EXTRACT ONLY · 不碰原声</p>
+        <h1>手里只有藏字音频，也能试着读。</h1>
+        <p>接收端不需要公开原声。它只需要同一套算法、同一个密钥，以及一条完整的 EnCodec 24 kHz token 流。</p>
+      </section>
+
+      <div class="extract-layout">
+        <section class="card extract-card">
+          <div class="card-heading">
+            <div>
+              <p class="eyebrow">提取验证</p>
+              <h2>把藏字 WAV 丢进来</h2>
+            </div>
+            <span class="hint-chip">模式与密钥必须一致</span>
+          </div>
+          <label class="field">
+            <span>藏字音频</span>
+            <input type="file" id="extractFile" accept=".wav,audio/wav,audio/x-wav">
+          </label>
+          <div class="form-grid compact-grid">
+            <label class="field">
+              <span>当时用的模式</span>
+              <select id="extractMode">
+                <option value="direct">直接替换索引</option>
+                <option value="hpp">直方图保持置换（HPP）</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>当时用的密钥</span>
+              <input id="extractKey" type="text" value="demo-2026" autocomplete="off">
+            </label>
+            <label class="field">
+              <span>当时的口令长度</span>
+              <select id="extractPayload">
+                <option value="16">16 bit（4 位）</option>
+                <option value="8" selected>8 bit（2 位）</option>
+              </select>
+            </label>
+            <label class="field full">
+              <span>期望口令（可选，用来帮你判对错）</span>
+              <input id="expectedSecret" type="text" maxlength="4" placeholder="例如 C0；不填就只显示读到的结果" autocomplete="off">
+            </label>
+          </div>
+          <button class="primary-btn" id="extractBtn" type="button">从这段音频里读</button>
+          <div class="alert error" id="extractError" hidden></div>
+          <div class="extract-result" id="extractResult" hidden>
+            <p class="eyebrow" id="extractEyebrow">读到的口令</p>
+            <div class="extract-code" id="extractCode">————</div>
+            <div class="bits" id="extractBits"></div>
+            <p class="plain-explain" id="extractExplain"></p>
+            <div class="expected-box" id="expectedBox" hidden></div>
+          </div>
+        </section>
+
+        <aside class="card aside-card">
+          <p class="eyebrow">提取失败的常见原因</p>
+          <h2>先别怀疑人生</h2>
+          <ol class="reason-list">
+            <li><b>模式选错：</b>直接替换和 HPP 的载波数量不同（66 vs 88）。</li>
+            <li><b>密钥错：</b>读出来会是一串“很像乱码”的十六进制。</li>
+            <li><b>音频被改过：</b>转 MP3、裁剪、重采样、降噪都会破坏帧对齐。</li>
+            <li><b>不是本站生成：</b>当前只认这条 EnCodec 24 kHz / L0 链路。</li>
+          </ol>
+          <p class="aside-caption">读出来不报错，不等于读对。填“期望口令”才能自动比对。</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="view" id="view-learn" hidden>
+      <section class="page-intro compact">
+        <p class="eyebrow">PROTOCOL · 协议 / 信道 / 威胁模型</p>
+        <h1>整条链路的形状，以及它在哪一层漏。</h1>
+        <p>这一页不是科普。每张图都对应 <code>core.py</code> 里的具体函数和 <code>02_隐写实验</code> 里的具体数字；参数、失败率和边界都按实测写，没有做平滑。</p>
+      </section>
+
+      <div class="learn-grid">
+        <section class="card learn-hero">
+          <p class="eyebrow">01 · 端到端</p>
+          <h2>一次嵌入实际走过的路径</h2>
+          <figure class="diagram">
+            <svg viewBox="0 0 680 272" role="img" aria-label="端到端链路：编码、嵌入、落盘、再编码、纠错">
+              <defs>
+                <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M0,0 L10,5 L0,10 z" fill="#a8b8cb"/>
+                </marker>
+              </defs>
+              <g font-family="Microsoft YaHei, sans-serif">
+                <!-- 发送端 -->
+                <text x="8" y="16" font-size="9.5" fill="#8b99ab">发送端</text>
+                <g>
+                  <rect x="8" y="26" width="154" height="66" rx="10" fill="#fbfdff" stroke="#e1e8f2"/>
+                  <text x="18" y="46" font-size="10" font-weight="700" fill="#3d5878">① PCM16 WAV</text>
+                  <text x="18" y="62" font-size="8.6" fill="#7d8da2">24 kHz · 4.02 s</text>
+                  <text x="18" y="76" font-size="8.6" fill="#7d8da2">T = 302 帧</text>
+                </g>
+                <line x1="164" y1="59" x2="174" y2="59" stroke="#a8b8cb" stroke-width="1.2" marker-end="url(#ar)"/>
+                <g>
+                  <rect x="176" y="26" width="154" height="66" rx="10" fill="#fbfdff" stroke="#e1e8f2"/>
+                  <text x="186" y="46" font-size="10" font-weight="700" fill="#3d5878">② EnCodec enc</text>
+                  <text x="186" y="62" font-size="8.6" fill="#7d8da2">RVQ 8 层 · 6 kbps（论文档）</text>
+                  <text x="186" y="76" font-size="8.6" fill="#7d8da2">z: 128 × 302</text>
+                </g>
+                <line x1="332" y1="59" x2="342" y2="59" stroke="#a8b8cb" stroke-width="1.2" marker-end="url(#ar)"/>
+                <g>
+                  <rect x="344" y="26" width="154" height="66" rx="10" fill="#fbfdff" stroke="#e1e8f2"/>
+                  <text x="354" y="46" font-size="10" font-weight="700" fill="#3d5878">③ 映射 + 纠错</text>
+                  <text x="354" y="62" font-size="8.6" fill="#7d8da2">bit_of/partner · K=7 r=1/3</text>
+                  <text x="354" y="76" font-size="8.6" fill="#7d8da2">→ 66 个载波位</text>
+                </g>
+                <line x1="500" y1="59" x2="510" y2="59" stroke="#a8b8cb" stroke-width="1.2" marker-end="url(#ar)"/>
+                <g>
+                  <rect x="512" y="26" width="160" height="66" rx="10" fill="#fbfdff" stroke="#e1e8f2"/>
+                  <text x="522" y="46" font-size="10" font-weight="700" fill="#3d5878">④ 写回 L0 索引</text>
+                  <text x="522" y="62" font-size="8.6" fill="#7d8da2">只动这 66 个 token</text>
+                  <text x="522" y="76" font-size="8.6" fill="#7d8da2">V = 1024</text>
+                </g>
+                <path d="M592,94 L592,126 L85,126 L85,152" fill="none" stroke="#c9d6e6" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+
+                <!-- 接收端 -->
+                <text x="8" y="146" font-size="9.5" fill="#8b99ab">接收端（不需要原始音频）</text>
+                <g>
+                  <rect x="8" y="156" width="154" height="66" rx="10" fill="#fbfdff" stroke="#e1e8f2"/>
+                  <text x="18" y="176" font-size="10" font-weight="700" fill="#3d5878">⑤ decode 成波形</text>
+                  <text x="18" y="192" font-size="8.6" fill="#7d8da2">24 kHz 重建</text>
+                  <text x="18" y="206" font-size="8.6" fill="#7d8da2">嵌入差异小；盲听待验证</text>
+                </g>
+                <line x1="164" y1="189" x2="174" y2="189" stroke="#a8b8cb" stroke-width="1.2" marker-end="url(#ar)"/>
+                <g>
+                  <rect x="176" y="156" width="154" height="66" rx="10" fill="#fbfdff" stroke="#e1e8f2"/>
+                  <text x="186" y="176" font-size="10" font-weight="700" fill="#3d5878">⑥ 落成 PCM16</text>
+                  <text x="186" y="192" font-size="8.6" fill="#7d8da2">交付文件就是它</text>
+                  <text x="186" y="206" font-size="8.6" fill="#7d8da2">无任何原始参考</text>
+                </g>
+                <line x1="332" y1="189" x2="342" y2="189" stroke="#a8b8cb" stroke-width="1.2" marker-end="url(#ar)"/>
+                <g>
+                  <rect x="344" y="156" width="154" height="66" rx="10" fill="#fff8f8" stroke="#f0c9c9"/>
+                  <text x="354" y="176" font-size="10" font-weight="700" fill="#a83333">⑦ 再 EnCodec</text>
+                  <text x="354" y="192" font-size="8.6" fill="#a83333">raw 存活 ≈ 0.78</text>
+                  <text x="354" y="206" font-size="8.6" fill="#a83333">约 22% 载波位翻转</text>
+                </g>
+                <line x1="500" y1="189" x2="510" y2="189" stroke="#a8b8cb" stroke-width="1.2" marker-end="url(#ar)"/>
+                <g>
+                  <rect x="512" y="156" width="160" height="66" rx="10" fill="#fbfdff" stroke="#e1e8f2"/>
+                  <text x="522" y="176" font-size="10" font-weight="700" fill="#3d5878">⑧ 取位 + 纠错</text>
+                  <text x="522" y="192" font-size="8.6" fill="#7d8da2">去交织 → Viterbi</text>
+                  <text x="522" y="206" font-size="8.6" fill="#7d8da2">→ 16 bit 判决</text>
+                </g>
+                <text x="8" y="248" font-size="9" fill="#0f9f6e">direct 120/120　　HPP 93.3%（P=128 + 自检，30 口令）</text>
+                <text x="8" y="264" font-size="9" fill="#8b99ab">⑦ 之前都是确定性运算；能否读回，全看这一步剩多少信息。</text>
+              </g>
+            </svg>
+            <figcaption>图 1　链路里唯一的非确定性环节是「再编码」。前面所有步骤都是可复现的整数运算，所以只要 ⑦ 之后取回的比特够多，Viterbi 就能把整条消息拉回来。</figcaption>
+          </figure>
+        </section>
+
+        <section class="card">
+          <p class="eyebrow">02 · HPP 保持了什么</p>
+          <h2>多重集不变，位置变了</h2>
+          <figure class="diagram">
+            <svg viewBox="0 0 680 196" role="img" aria-label="HPP 置换前后索引多重集相同">
+              <g font-family="Microsoft YaHei, sans-serif">
+                <text x="10" y="26" font-size="9.5" fill="#8b99ab">公开音频 L0[0:P]</text>
+                <text x="10" y="96" font-size="9.5" fill="#8b99ab">藏字后同一段</text>
+                <!-- row 1 -->
+                <g>
+                  <rect x="80" y="24" width="44" height="30" rx="6" fill="#fff7e8" stroke="#f0e0c7"/><text x="102" y="43" font-size="9.5" text-anchor="middle" fill="#344258">37</text>
+                  <rect x="130" y="24" width="44" height="30" rx="6" fill="#eef4ff" stroke="#dbe6f6" stroke-dasharray="3 2"/><text x="152" y="43" font-size="9.5" text-anchor="middle" fill="#344258">512</text>
+                  <rect x="180" y="24" width="44" height="30" rx="6" fill="#eef4ff" stroke="#dbe6f6"/><text x="202" y="43" font-size="9.5" text-anchor="middle" fill="#344258">88</text>
+                  <rect x="230" y="24" width="44" height="30" rx="6" fill="#fff7e8" stroke="#f0e0c7" stroke-dasharray="3 2"/><text x="252" y="43" font-size="9.5" text-anchor="middle" fill="#344258">903</text>
+                  <rect x="280" y="24" width="44" height="30" rx="6" fill="#fff7e8" stroke="#f0e0c7"/><text x="302" y="43" font-size="9.5" text-anchor="middle" fill="#344258">37</text>
+                  <rect x="330" y="24" width="44" height="30" rx="6" fill="#eef4ff" stroke="#dbe6f6"/><text x="352" y="43" font-size="9.5" text-anchor="middle" fill="#344258">210</text>
+                  <rect x="380" y="24" width="44" height="30" rx="6" fill="#eef4ff" stroke="#dbe6f6" stroke-dasharray="3 2"/><text x="402" y="43" font-size="9.5" text-anchor="middle" fill="#344258">512</text>
+                  <rect x="430" y="24" width="44" height="30" rx="6" fill="#eef4ff" stroke="#dbe6f6"/><text x="452" y="43" font-size="9.5" text-anchor="middle" fill="#344258">640</text>
+                  <rect x="480" y="24" width="44" height="30" rx="6" fill="#eef4ff" stroke="#dbe6f6"/><text x="502" y="43" font-size="9.5" text-anchor="middle" fill="#344258">88</text>
+                  <rect x="530" y="24" width="44" height="30" rx="6" fill="#fff7e8" stroke="#f0e0c7" stroke-dasharray="3 2"/><text x="552" y="43" font-size="9.5" text-anchor="middle" fill="#344258">305</text>
+                  <rect x="580" y="24" width="44" height="30" rx="6" fill="#eef4ff" stroke="#dbe6f6"/><text x="602" y="43" font-size="9.5" text-anchor="middle" fill="#344258">210</text>
+                  <rect x="630" y="24" width="44" height="30" rx="6" fill="#fff7e8" stroke="#f0e0c7"/><text x="652" y="43" font-size="9.5" text-anchor="middle" fill="#344258">77</text>
+                </g>
+                <!-- 置换箭头 -->
+                <path d="M152,56 C152,68 452,68 452,56" fill="none" stroke="#b9c9dd" stroke-width="1" stroke-dasharray="3 3"/>
+                <path d="M252,56 C252,70 102,70 102,56" fill="none" stroke="#b9c9dd" stroke-width="1" stroke-dasharray="3 3"/>
+                <!-- row 2 -->
+                <g>
+                  <rect x="80" y="94" width="44" height="30" rx="6" fill="#eef4ff" stroke="#dbe6f6" stroke-dasharray="3 2"/><text x="102" y="113" font-size="9.5" text-anchor="middle" fill="#344258">88</text>
+                  <rect x="130" y="94" width="44" height="30" rx="6" fill="#eef4ff" stroke="#dbe6f6"/><text x="152" y="113" font-size="9.5" text-anchor="middle" fill="#344258">210</text>
+                  <rect x="180" y="94" width="44" height="30" rx="6" fill="#fff7e8" stroke="#f0e0c7"/><text x="202" y="113" font-size="9.5" text-anchor="middle" fill="#344258">37</text>
+                  <rect x="230" y="94" width="44" height="30" rx="6" fill="#fff7e8" stroke="#f0e0c7" stroke-dasharray="3 2"/><text x="252" y="113" font-size="9.5" text-anchor="middle" fill="#344258">903</text>
+                  <rect x="280" y="94" width="44" height="30" rx="6" fill="#eef4ff" stroke="#dbe6f6" stroke-dasharray="3 2"/><text x="302" y="113" font-size="9.5" text-anchor="middle" fill="#344258">512</text>
+                  <rect x="330" y="94" width="44" height="30" rx="6" fill="#eef4ff" stroke="#dbe6f6"/><text x="352" y="113" font-size="9.5" text-anchor="middle" fill="#344258">88</text>
+                  <rect x="380" y="94" width="44" height="30" rx="6" fill="#eef4ff" stroke="#dbe6f6"/><text x="402" y="113" font-size="9.5" text-anchor="middle" fill="#344258">640</text>
+                  <rect x="430" y="94" width="44" height="30" rx="6" fill="#fff7e8" stroke="#f0e0c7"/><text x="452" y="113" font-size="9.5" text-anchor="middle" fill="#344258">37</text>
+                  <rect x="480" y="94" width="44" height="30" rx="6" fill="#fff7e8" stroke="#f0e0c7" stroke-dasharray="3 2"/><text x="502" y="113" font-size="9.5" text-anchor="middle" fill="#344258">305</text>
+                  <rect x="530" y="94" width="44" height="30" rx="6" fill="#eef4ff" stroke="#dbe6f6"/><text x="552" y="113" font-size="9.5" text-anchor="middle" fill="#344258">512</text>
+                  <rect x="580" y="94" width="44" height="30" rx="6" fill="#fff7e8" stroke="#f0e0c7"/><text x="602" y="113" font-size="9.5" text-anchor="middle" fill="#344258">77</text>
+                  <rect x="630" y="94" width="44" height="30" rx="6" fill="#eef4ff" stroke="#dbe6f6"/><text x="652" y="113" font-size="9.5" text-anchor="middle" fill="#344258">210</text>
+                </g>
+                <text x="10" y="150" font-size="9" fill="#344258">多重集：37×2　88×2　210×2　512×2　77　305　640　903 —— 两行完全相同，只是位置被换过。</text>
+                <text x="10" y="166" font-size="9" fill="#0f9f6e">→ 全局直方图 L1 = 0（实测），因此“数格子”类攻击失效。</text>
+                <text x="10" y="182" font-size="9" fill="#c77700">→ 但波形已经变了，⑦ 的再编码会把新的索引统计重新灌回来：接收端 L1 实测约 0.07。</text>
+              </g>
+            </svg>
+            <figcaption>图 2　虚线框是 66 个载波位中的一部分（示意）。HPP 约束的是「整段 P 的码字多重集」，不是单个位置的值，所以置换必须在 P 内闭合；这也是它对短音频敏感的原因——P 越大越容易满足约束，但可用的帧不够时只能压缩 P，可行解空间随之变窄。</figcaption>
+          </figure>
+        </section>
+
+        <section class="card">
+          <p class="eyebrow">03 · 听感从哪来</p>
+          <h2>同一段音频，换配对方式，失真差 12 dB</h2>
+          <figure class="diagram">
+            <svg viewBox="0 0 680 238" role="img" aria-label="随机配对与最近邻配对的分段信噪比对比">
+              <g font-family="Microsoft YaHei, sans-serif">
+                <text x="10" y="16" font-size="9.5" fill="#8b99ab">direct 模式 · 4.39 s 示例音频 · 6 kbps 档 · 12 次平均 · 分段 SNR（越大越好）</text>
+
+                <text x="150" y="64" font-size="9.5" fill="#6d7b90" text-anchor="end">随机码字配对</text>
+                <rect x="165" y="46" width="236" height="26" rx="5" fill="#c77700"/>
+                <text x="409" y="64" font-size="9.5" fill="#c77700" font-weight="700">15.4 dB</text>
+
+                <text x="150" y="120" font-size="9.5" fill="#6d7b90" text-anchor="end">最近邻码字配对</text>
+                <rect x="165" y="102" width="415" height="26" rx="5" fill="#0f9f6e"/>
+                <text x="588" y="120" font-size="9.5" fill="#0f9f6e" font-weight="700">27.1 dB</text>
+
+                <line x1="330" y1="34" x2="330" y2="138" stroke="#dc2626" stroke-width="1" stroke-dasharray="4 3"/>
+                <text x="334" y="42" font-size="8.6" fill="#dc2626">codec 自身 10.8 dB</text>
+
+                <line x1="165" y1="152" x2="640" y2="152" stroke="#dfe7f2"/>
+                <g font-size="8" fill="#9aa8ba" text-anchor="middle">
+                  <text x="165" y="165">0</text><text x="318" y="165">10</text><text x="472" y="165">20</text><text x="625" y="165">30</text>
+                </g>
+
+                <text x="10" y="192" font-size="9" fill="#344258">对数谱距离 LSD：最近邻配对 <tspan fill="#0f9f6e" font-weight="700">1.5 dB</tspan>，codec 地板 <tspan fill="#c77700" font-weight="700">9.1 dB</tspan>（越小越好）</text>
+                <text x="10" y="210" font-size="9" fill="#8b99ab">STOI 0.915 → 0.990，但两种都 12/12 完整恢复：换配对没有牺牲可解码性。</text>
+                <text x="10" y="226" font-size="9" fill="#8b99ab">随机配对会把索引换成码本里很远的一个格子，那一层就是能听见的“咔哒”。</text>
+              </g>
+            </svg>
+            <figcaption>图 3　以前 direct 用的是随机码字配对，嵌入噪声只比 codec 地板低 4.6 dB，等于在已经很脏的码流上再糊一层，人耳当然分得出。改成最近邻匹配后，噪声比 6 kbps 档地板（10.8 dB）低 16 dB；换到 24 kbps 档，地板升到 15.4 dB，差距缩到 12 dB——地板也是会动的。注意：<b>STOI 在这两次里只从 0.915 变到 0.990，几乎看不出问题</b>——所以别用 STOI 判断“听不出来”。</figcaption>
+          </figure>
+        </section>
+
+        <section class="card">
+          <p class="eyebrow">04 · 威胁模型</p>
+          <h2>三个观测面，分别有多少可分性</h2>
+          <figure class="diagram">
+            <svg viewBox="0 0 680 232" role="img" aria-label="索引直方图、LFCC 与黑盒检测器的 AUC">
+              <g font-family="Microsoft YaHei, sans-serif">
+                <text x="10" y="16" font-size="9.5" fill="#8b99ab">12 个留出说话人、120 对公开/藏字样本 · 留一说话人交叉验证 · AUC</text>
+                <line x1="213" y1="28" x2="213" y2="196" stroke="#c9d6e6" stroke-dasharray="4 3"/>
+                <text x="213" y="208" font-size="8" fill="#8b99ab" text-anchor="middle">0.5 随机</text>
+                <line x1="606" y1="28" x2="606" y2="196" stroke="#f0dede"/>
+                <text x="606" y="208" font-size="8" fill="#b08a8a" text-anchor="middle">0.9</text>
+                <g font-size="9" fill="#6d7b90" text-anchor="end">
+                  <text x="196" y="45">索引直方图 · direct</text>
+                  <text x="196" y="73">索引直方图 · HPP</text>
+                  <text x="196" y="101">LFCC · direct</text>
+                  <text x="196" y="129">LFCC · HPP</text>
+                  <text x="196" y="157">Nes2Net 分数 · direct</text>
+                  <text x="196" y="185">Nes2Net 分数 · HPP</text>
+                </g>
+                <g>
+                  <rect x="213" y="34" width="414" height="14" rx="4" fill="#c77700"/>
+                  <text x="633" y="45" font-size="8.6" fill="#c77700">0.921</text>
+                  <rect x="213" y="62" width="96" height="14" rx="4" fill="#0f9f6e"/>
+                  <text x="315" y="73" font-size="8.6" fill="#0f9f6e">0.598</text>
+                  <rect x="213" y="90" width="204" height="14" rx="4" fill="#c77700"/>
+                  <text x="423" y="101" font-size="8.6" fill="#c77700">0.708</text>
+                  <rect x="213" y="118" width="73" height="14" rx="4" fill="#0f9f6e"/>
+                  <text x="292" y="129" font-size="8.6" fill="#0f9f6e">0.574</text>
+                  <rect x="213" y="146" width="2" height="14" rx="1" fill="#0f9f6e"/>
+                  <text x="221" y="157" font-size="8.6" fill="#0f9f6e">0.502</text>
+                  <rect x="213" y="174" width="143" height="14" rx="4" fill="#c77700"/>
+                  <text x="362" y="185" font-size="8.6" fill="#c77700">0.645</text>
+                </g>
+                <text x="10" y="226" font-size="8.6" fill="#8b99ab">柱长按 0.5→1.0 线性映射；橙色 = 还能被这个观测面分开，绿色 = 接近随机。</text>
+              </g>
+            </svg>
+            <figcaption>图 4　三个面必须分开看。HPP 把「数格子」压到 0.598，但 LFCC 仍有 0.574 的残余、Nes2Net 反而升到 0.645；direct 则相反——Nes2Net 几乎 0.5，直方图却 0.921。<b>任何一个面的 0.5 都不能当作安全证据。</b></figcaption>
+          </figure>
+        </section>
+
+        <section class="card">
+          <p class="eyebrow">05 · 失败模式</p>
+          <h2>现在会怎么坏</h2>
+          <div class="limit-grid">
+            <div><b>单比特错</b><span>失败样本里最常见的是 16 bit 中错 1 位（如 1391 → 1390）。Viterbi 已经收敛到邻域，差的是最后一格。</span></div>
+            <div><b>消息依赖</b><span>有些 16 bit 组合在这段音频上结构性难解：raw 停在 0.74 左右，换 12 种置换也救不回来，最后降级为 direct。</span></div>
+            <div><b>短音频</b><span>帧数少于 P 时直接不可行（示例里 2.09 s 那条只有 157 帧，P=160 装不下）；P 被压小后可行解也变窄。</span></div>
+            <div><b>链路外</b><span>MP3、重采样、裁剪、降噪、微信语音都会破坏帧对齐。当前只对同一条 EnCodec 24 kHz / L0 链路负责。</span></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <p class="eyebrow">06 · 写论文时的措辞</p>
+          <h2>能写与不能写</h2>
+          <div class="claim-columns">
+            <div class="can">
+              <h3>可以写</h3>
+              <ul>
+                <li>同链路 PCM16 回读后 16 bit 消息可恢复（direct 100%，HPP 97.5%，独立复现 102/105）。</li>
+                <li>直接换索引改变边际分布，简单分析器 AUC 0.89–0.92。</li>
+                <li>HPP 使 token 层多重集严格不变，直方图 AUC 降至 0.598。</li>
+                <li>HPP 的残余风险仍在波形层（LFCC 0.574、Nes2Net 0.645）。</li>
+              </ul>
+            </div>
+            <div class="cannot">
+              <h3>不能写</h3>
+              <ul>
+                <li>不可检测 / 统计不可区分。</li>
+                <li>密码学安全（错钥 50% 只是映射性质）。</li>
+                <li>跨 codec、跨平台鲁棒。</li>
+                <li>高容量或实时可部署。</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>语音隐写演示台 · 仅用于课程/科研演示</span>
+    <span>EnCodec 24 kHz · 6/12/24 kbps · L0 · 8/16 bit payload</span>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
