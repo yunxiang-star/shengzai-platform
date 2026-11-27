@@ -82,7 +82,16 @@ python launch.py --port 8766
 
 ## 怎么提交改动（三步）
 
-第一次用，先配置：
+**第 0 步，clone 之后执行一次**（启用防误推钩子）：
+
+```bash
+git config core.hooksPath .githooks
+```
+
+启用后，只要你在 `main` 上直接 `git push`，会被本地拦住并提示怎么做。
+这是本地防线——即使 GitHub 上的分支保护没开，手滑也推不上去。
+
+第一次用，再配置身份：
 
 ```bash
 git config --global user.name "你的名字"
